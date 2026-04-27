@@ -42,10 +42,10 @@ The program is structured using object-oriented principles, separating:
 
 ## Requirements
 
-# A Python virtual environment is required to run this project.
-# Create and activate a virtual environment before installing dependencies.
+#### ! IMPORTANT !
+#### A Python virtual environment is required to run this project. Create and activate a virtual environment before installing dependencies.
 
-# Packages
+### Packages
 opencv - Modify and process images.
 pillow - Makes images usable in Tkinter.
 
