@@ -1,7 +1,15 @@
 import cv2, os, time, sys, random
 import tkinter as tk
+from PIL import Image, ImageTk
+
 
 db = 1 # debug info
+
+def to_tk_image(cv_img):
+    rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(rgb)
+    return ImageTk.PhotoImage(pil_img)
+
 
 # Handle loading and storing the image and the modified image.
 class GameImage:
@@ -47,6 +55,13 @@ class GameImage:
             
             # Non overlapping regions are added to the differences list.
             self.differences.append(new_diff)
+        
+        for diff in self.differences:
+            self.modified[
+            diff.y : diff.y + diff.h,
+            diff.x : diff.x + diff.w
+            ]  = (0, 0, 0)
+
     
     # Comapre newly generated candidate region for any overlapping with existing regions
     def overlaps_with_existing(self, candidate):
@@ -84,9 +99,11 @@ class Difference:
         # Using the smaller dimension of the image, 
         # scale min and max sizes to use in randint to be relative to image size
         min_size = int(0.05 * min(self.image_w, self.image_h))
-        max_size = int(0.010 * min(self.image_w, self.image_h))
+        max_size = int(0.10 * min(self.image_w, self.image_h))
 
         # Generate random width and height for region
+        min_size = max(5, min_size)
+        max_size = max(min_size + 1, max_size)
         self.w = random.randint(min_size, max_size)
         self.h = random.randint(min_size, max_size)
         
@@ -102,3 +119,24 @@ class Game:
 if __name__ == "__main__":
     image = GameImage()
     image.load_image("test.png")
+
+    # Create window
+    root = tk.Tk()
+    root.title("Spot the Difference")
+
+    # Convert images
+    img1 = to_tk_image(image.image)
+    img2 = to_tk_image(image.modified)
+
+    # Create labels
+    label1 = tk.Label(root, image=img1)
+    label1.pack(side="left", padx=10, pady=10)
+
+    label2 = tk.Label(root, image=img2)
+    label2.pack(side="right", padx=10, pady=10)
+
+    # IMPORTANT: keep references
+    label1.image = img1
+    label2.image = img2
+
+    root.mainloop()
