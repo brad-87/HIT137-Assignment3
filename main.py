@@ -41,6 +41,8 @@ class GameImage:
         except Exception as errormsg:
             print("Error:", errormsg)
     
+
+    
         # List of diference objects
         self.differences = []
 
@@ -56,11 +58,15 @@ class GameImage:
             # Non overlapping regions are added to the differences list.
             self.differences.append(new_diff)
         
+        # Make the image modifications
         for diff in self.differences:
             self.modified[
             diff.y : diff.y + diff.h,
             diff.x : diff.x + diff.w
-            ]  = (0, 0, 0)
+            ]  = (0, 0, 0) # <<---Black box......................................................Apply an effect here instead
+            if db:
+                print(f"Modifying Image. X:{diff.x} Y:{diff.y},  W:{diff.w} H:{diff.h}")
+
 
     
     # Comapre newly generated candidate region for any overlapping with existing regions
