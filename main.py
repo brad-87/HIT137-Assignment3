@@ -41,8 +41,8 @@ class GameImage:
         except Exception as errormsg:
             print("Error:", errormsg)
     
-
     
+
         # List of diference objects
         self.differences = []
 
@@ -104,8 +104,8 @@ class Difference:
     def randomise(self):
         # Using the smaller dimension of the image, 
         # scale min and max sizes to use in randint to be relative to image size
-        min_size = int(0.05 * min(self.image_w, self.image_h))
-        max_size = int(0.10 * min(self.image_w, self.image_h))
+        min_size = int(0.10 * min(self.image_w, self.image_h))
+        max_size = int(0.15 * min(self.image_w, self.image_h))
 
         # Generate random width and height for region
         min_size = max(5, min_size)
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     image = GameImage()
     image.load_image("test.png")
 
-    # Create window
+    # Create GUI window and give it a title
     root = tk.Tk()
     root.title("Spot the Difference")
 
@@ -134,15 +134,16 @@ if __name__ == "__main__":
     img1 = to_tk_image(image.image)
     img2 = to_tk_image(image.modified)
 
-    # Create labels
+    # Create image containers, called labels and assign them to the root window
     label1 = tk.Label(root, image=img1)
     label1.pack(side="left", padx=10, pady=10)
 
     label2 = tk.Label(root, image=img2)
     label2.pack(side="right", padx=10, pady=10)
 
-    # IMPORTANT: keep references
+    # Assign labels to their image so garbage collector wont free the memory (Tkinter does strange stuff otherwise)
     label1.image = img1
     label2.image = img2
 
+    # Star GUI engine. Wait for user inputs or redraw commands.
     root.mainloop()
