@@ -26,7 +26,7 @@ class GameImage:
             path = os.path.join(os.path.dirname(__file__), filename)
             self.image = cv2.imread(path)
             
-            # Make sure something was read into image variable
+            # Make sure something was read into the image variable
             if self.image is None:
                 print("Error: Failed to load image")
                 sys.exit()
@@ -43,7 +43,7 @@ class GameImage:
     
     
 
-        # List of diference objects
+        # List of different objects
         self.differences = []
 
         # Generate a list of 5 regions to apply visual effects to
@@ -51,39 +51,83 @@ class GameImage:
         # Generate a difference region
             new_diff = Difference(self.width, self.height)
 
-            # Check if the new region overlaps any other stored region, and disregard if operlapping
+            # Check if the new region overlaps any other stored region, and disregard if overlapping
             if self.overlaps_with_existing(new_diff):
                 continue
             
-            # Non overlapping regions are added to the differences list.
+            # Non-overlapping regions are added to the differences list.
             self.differences.append(new_diff)
         
         # Make the image modifications
         for diff in self.differences:
-            self.modified[
+    
+        # Extract the selected region from the modified image
+        # ROI = Region Of Interest
+        roi = self.modified[
             diff.y : diff.y + diff.h,
             diff.x : diff.x + diff.w
-            ]  = (0, 0, 0) # <<---Black box......................................................Apply an effect here instead
-            if db:
-                print(f"Modifying Image. X:{diff.x} Y:{diff.y},  W:{diff.w} H:{diff.h}")
+        ]
+    
+        # Randomly choose one of three visual effects
+        choice = random.choice(["colour", "blur", "brightness"])
+    
+        # ---------------------------
+        # EFFECT 1: COLOUR SHIFT
+        # ---------------------------
+        if choice == "colour":
+    
+            # Convert image region from BGR to HSV colour space
+            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    
+            # Slightly shift hue values to change colours subtly
+            hsv[:, :, 0] = (hsv[:, :, 0] + 10) % 180
+    
+            # Convert back to BGR colour format
+            roi = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    
+        # ---------------------------
+        # EFFECT 2: BLUR
+        # ---------------------------
+        elif choice == "blur":
+    
+            # Apply Gaussian blur to soften the selected region
+            roi = cv2.GaussianBlur(roi, (9, 9), 0)
+    
+        # ---------------------------
+        # EFFECT 3: BRIGHTNESS CHANGE
+        # ---------------------------
+        elif choice == "brightness":
+    
+            # Increase brightness slightly
+            roi = cv2.convertScaleAbs(roi, alpha=1, beta=25)
+    
+        # Place the modified region back into the image
+        self.modified[
+            diff.y : diff.y + diff.h,
+            diff.x : diff.x + diff.w
+        ] = roi
+    
+        # Print debug information showing where changes were made
+        if db:
+            print(f"Modifying Image. X:{diff.x} Y:{diff.y}, W:{diff.w} H:{diff.h}")
 
 
     
-    # Comapre newly generated candidate region for any overlapping with existing regions
+    # Compare the newly generated candidate region for any overlap with existing regions
     def overlaps_with_existing(self, candidate):
         
         # Load the saved valid regions one by one to check against the candidate region
         for diff in self.differences:
                 
                 if not (
-                    # If an overlap doesn't exist then return True, else return False
+                    # If an overlap doesn't exist, then return True, else return False
                     diff.x + diff.w <= candidate.x or  candidate.x + candidate.w <= diff.x or
                     diff.y + diff.h <= candidate.y or  candidate.y + candidate.h <= diff.y
                     ):
                         return True
         return False
     
-# Represent a hidden difference region, and detects if it's been clicked.
+# Represent a hidden difference region, and detect if it's been clicked.
 class Difference:
 
     def __init__(self, image_w, image_h):
@@ -147,3 +191,79 @@ if __name__ == "__main__":
 
     # Star GUI engine. Wait for user inputs or redraw commands.
     root.mainloop()
+
+
+# Create game object
+game = Game()
+
+# Store score and mistakes
+game.score = 0
+game.mistakes = 0
+
+
+# Detect clicks on the modified image
+def on_click(event):
+
+    # Get mouse click coordinates
+    x = event.x
+    y = event.y
+
+    found = False
+
+    # Check every hidden difference region
+    for diff in image.differences:
+
+        # Skip already found differences
+        if diff.found:
+            continue
+
+        # Check if click is inside region
+        if (
+            diff.x <= x <= diff.x + diff.w and
+            diff.y <= y <= diff.y + diff.h
+        ):
+
+            diff.found = True
+            found = True
+
+            # Increase score
+            game.score += 1
+
+            # Find circle centre
+            cx = diff.x + diff.w // 2
+            cy = diff.y + diff.h // 2
+
+            # Circle size
+            radius = max(diff.w, diff.h) // 2
+
+            # Draw red circle on both images
+            cv2.circle(image.image, (cx, cy), radius, (0,0,255), 3)
+            cv2.circle(image.modified, (cx, cy), radius, (0,0,255), 3)
+
+            print(f"Correct! Score: {game.score}")
+
+            break
+
+    # Wrong click
+    if not found:
+        game.mistakes += 1
+        print(f"Wrong click! Mistakes: {game.mistakes}/3")
+
+    # Convert updated images
+    new_img1 = to_tk_image(image.image)
+    new_img2 = to_tk_image(image.modified)
+
+    # Refresh displayed images
+    label1.config(image=new_img1)
+    label1.image = new_img1
+
+    canvas.itemconfig(canvas_img, image=new_img2)
+    canvas.image = new_img2
+
+    # Win condition
+    if game.score == 5:
+        print("YOU FOUND ALL DIFFERENCES!")
+
+    # Lose condition
+    if game.mistakes >= 3:
+        print("GAME OVER")
