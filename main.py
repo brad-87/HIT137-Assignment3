@@ -5,6 +5,13 @@ from PIL import Image, ImageTk
 
 db = 1 # debug info
 
+image_file = "test_4k+.jpg"
+    #test.png
+    #test_long.png
+    #test_4k+.jpg
+    
+
+
 def to_tk_image(cv_img):
     rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
     pil_img = Image.fromarray(rgb)
@@ -13,6 +20,11 @@ def to_tk_image(cv_img):
 
 # Handle loading and storing the image and the modified image.
 class GameImage:
+
+    """
+    This class handles reading a file, scaling (if required) image while maintaining aspect ratio
+    creates non-overlapping areas and applies image transformation effects to those areas.
+    """
 
     def __init__(self):
         self.image = None
@@ -33,13 +45,15 @@ class GameImage:
                 print("Error: Failed to load image")
                 sys.exit()
 
-            # Get image metrics, and create an image copy we can modify
+            # Get image metrics
             self.height, self.width, _ = self.image.shape
-            self.check_dimensions()
-            self.modified = self.image.copy()
 
             if db:
                 print(f"File '{path}' loaded. width:{self.width} height:{self.height}")
+
+            # Check image size, scale if required, then create an image copy we can modify
+            self.check_dimensions()
+            self.modified = self.image.copy()
 
         except Exception as errormsg:
             print("Error:", errormsg)
@@ -132,23 +146,32 @@ class GameImage:
 
     # Function to see if the two images are too large to display on the users screen, and resize if required.
     def check_dimensions(self):
+        scaled = False
 
-        if db:
-            print(f"Loaded image dimensions: w-{self.width}  h-{self.height}")
-
+        # Calculate aspect ratio of loaded image
         aspect_ratio = self.width / self.height
 
+        # If two images side by side exceed width of screen resolution then scale image
         if (2 * (self.width) >= self.screen_width):
             self.image = cv2.resize(self.image,( int(     (0.45)*self.screen_width   ),  int(      (0.45)*self.screen_width / aspect_ratio)      ))
             self.height, self.width = self.image.shape[:2]
+            scaled = True
 
+        # If image height exceeds height of screen resolution then scale image
         if (self.height >= self.screen_height):
             self.image = cv2.resize(self.image,(    int(  aspect_ratio * (self.screen_height - 330)   ) ,    int(  self.screen_height - 330  )   ))
             self.height, self.width = self.image.shape[:2]
+            scaled = True
 
+        if db and scaled:
+            print(f"Image Dimensions scaled to: w-{self.width}  h-{self.height}")
 
 # Represent a hidden difference region, and detect if it's been clicked.
 class Difference:
+
+    """
+    Responsible for generating scaled random width/height values for candidate regions for image modification
+    """
 
     def __init__(self, image_w, image_h):
         # Create variables for difference regions
@@ -183,7 +206,10 @@ class Difference:
     
 # Controls game state, user interaction, scoring, etc.
 class Game:
-    pass
+    def __init__(self):
+        self.score = 0
+        self.mistakes = 0
+        self.hint = False
 
 
 
@@ -191,26 +217,104 @@ class Game:
 
 if __name__ == "__main__":
 
-    image = GameImage()
+    game_start_time = time.time()
+    elapsed = 0
 
+    def give_hint():
+        """
+        check all difference objects untill first instance of found=False.
+        change found to true, circle in different color. score++
+        """
+        hint_button.config(state="disabled")
+    
+        for diff in image.differences:
+
+            # Skip already found differences
+            if diff.found:
+                continue
+
+            diff.found = True
+
+            # Increase score
+            game.score += 1
+            found_label.config(text=f"Found {game.score} differences out of 5")
+
+            # Find circle centre
+            cx = diff.x + diff.w // 2
+            cy = diff.y + diff.h // 2
+
+            # Circle size
+            radius = max(diff.w, diff.h) // 2
+            cv2.circle(image.modified, (cx, cy), radius, (0,255,0), 3)
+            print(f"Score: {game.score}")
+            break
+        
+        new_m_image = to_tk_image(image.modified)
+        label_m.config(image=new_m_image)
+        label_m.image = new_m_image
+
+
+    def restart_game():
+
+        global elapsed, game_start_time
+        
+        game_start_time = time.time()
+        elapsed = 0
+
+        # Reset game state
+        game.score = 0
+        game.mistakes = 0
+
+        # Reload/regenerate image
+        image.load_image(image_file)
+
+        # Convert updated images
+        new_o = to_tk_image(image.image)
+        new_m = to_tk_image(image.modified)
+
+        # Update labels
+        label_o.config(image=new_o)
+        label_o.image = new_o
+        label_m.config(image=new_m)
+        label_m.image = new_m
+
+        # Reset text labels
+        found_label.config(text=f"Found {game.score} differences out of 5")
+        timer_label.config(text=f"Elapsed Time: {elapsed} Seconds")
+        
+        # Re-enable hint button
+        hint_button.config(state="normal")
+
+
+    def display_elapsed():
+        
+        elapsed = int(time.time() - game_start_time)
+        timer_label.config(text=f"Elapsed Time: {elapsed} Seconds")
+        root.after(1000, display_elapsed)
+
+
+    # Create image, game and window objects
+    image = GameImage()
+    game = Game()
     root = tk.Tk()
 
+    # Get screen resolution information
     image.screen_width = root.winfo_screenwidth()
     image.screen_height = root.winfo_screenheight()
-    #image.load_image("test.png")
-    #image.load_image("test_long.png")
-    image.load_image("test_4k+.jpg")
+
+    # Load image
+    image.load_image(image_file)
+    
+    # Setup window size and parameters
     root.title("Spot The Difference")
     window_size = f"{2*image.width + 100}x{image.height + 250}+0+0"
+    root.minsize(700,500) # restrict window sizes
+    root.maxsize(image.screen_width, image.screen_height)
+    root.geometry(window_size) # define window size
 
     if db:
         print("Root window size:" + window_size)
 
-    
-    root.minsize(700,500) # restrict window sizes
-    root.maxsize(image.screen_width, image.screen_height)
-    root.geometry(window_size) # define window size
-    
     
     score_frame = tk.Frame(root, borderwidth=5, relief="groove",background="Grey")
     top_frame = tk.Frame(root, borderwidth=5, relief="groove",background="Grey")
@@ -225,15 +329,15 @@ if __name__ == "__main__":
     modified_label.grid(row=0, column=1, sticky="e")
     
 
-    found_label= tk.Label(score_frame, text="Found x differences out of 5", font=("Aeial",12))
-    attempts_label = tk.Label(score_frame, text="Attempts: ", font=("Aeial",12))
-    hint_button = tk.Button(score_frame, text="Hint - One use only", font=("Ariel", 10))
+    found_label= tk.Label(score_frame, text="Found 0 differences out of 5", font=("Aeial",12))
+    mistake_label = tk.Label(score_frame, text="Mistakes: ", font=("Aeial",12))
+    hint_button = tk.Button(score_frame, text="Hint - One use only", font=("Ariel", 10), command=give_hint)
     score_frame.rowconfigure(0, weight=1)
     score_frame.columnconfigure(0, weight=1)
     score_frame.columnconfigure(1, weight=1)
     score_frame.columnconfigure(2, weight=1)
     found_label.grid(row=0, column=0, sticky="ew")
-    attempts_label.grid(row=0, column=1, sticky="ew")
+    mistake_label.grid(row=0, column=1, sticky="ew")
     hint_button.grid(row=0, column=2, sticky="e")
 
 
@@ -251,14 +355,14 @@ if __name__ == "__main__":
     label_m.grid(row=0, column=1, sticky="nsew")
 
     
-    timer_label= tk.Label(bottom_frame, text="Elapsed Time: ", font=("Aeial",12))
+    timer_label= tk.Label(bottom_frame, text="Elapsed Time: 0 Seconds", font=("Aeial",12))
     status_label= tk.Label(bottom_frame, text="GameOver/Finished in x:xx time", font=("Aeial",12))
-    restart_button = tk.Button(bottom_frame, text="Restart", font=("Ariel", 12))
+    restart_button = tk.Button(bottom_frame, text="Restart", font=("Ariel", 12), command=restart_game)
     bottom_frame.rowconfigure(0, weight=1)
     bottom_frame.columnconfigure(0, weight=1, )
     bottom_frame.columnconfigure(1, weight=1)
     bottom_frame.columnconfigure(2, weight=1)
-    timer_label.grid(row=0, column=0, sticky="ew")
+    timer_label.grid(row=0, column=0, sticky="w")
     status_label.grid(row=0, column=1, sticky="ew")
     restart_button.grid(row=0, column=3)
 
@@ -269,17 +373,7 @@ if __name__ == "__main__":
     bottom_frame.pack(fill="x")
  
 
-# Create game object
-    game = Game()
 
-    # Store score and mistakes
-    game.score = 0
-    game.mistakes = 0
-    # GUI score labels
-    score_label = tk.Label(root, text=f"Score: {game.score}", font=("Arial", 14))
-    score_label.pack()
-    mistake_label = tk.Label(root, text=f"Mistakes: {game.mistakes}/3", font=("Arial", 14))
-    mistake_label.pack()
 
     # Detect clicks on the modified image
     def on_click(event):
@@ -308,7 +402,7 @@ if __name__ == "__main__":
 
                 # Increase score
                 game.score += 1
-                score_label.config(text=f"Score: {game.score}")
+                found_label.config(text=f"Found {game.score} differences out of 5")
 
                 # Find circle centre
                 cx = diff.x + diff.w // 2
@@ -320,16 +414,13 @@ if __name__ == "__main__":
                 # Draw red circle on both images
                 #cv2.circle(image.image, (cx, cy), radius, (0,0,255), 3)
                 cv2.circle(image.modified, (cx, cy), radius, (0,0,255), 3)
-
-                print(f"Correct! Score: {game.score}")
-
                 break
 
         # Wrong click
         if not found:
             game.mistakes += 1
-            mistake_label.config(text=f"Mistakes: {game.mistakes}/3")
-            print(f"Wrong click! Mistakes: {game.mistakes}/3")
+            mistake_label.config(text=f"Incorrect: {game.mistakes}/3")
+
 
         # Convert updated images
         #new_o_image = to_tk_image(image.image)
@@ -352,6 +443,16 @@ if __name__ == "__main__":
             print("GAME OVER")
 
     label_m.bind("<Button-1>", on_click)
+
+
+
+    # Convert updated image
+    new_m_image = to_tk_image(image.modified)
+    label_m.config(image=new_m_image)
+    label_m.image = new_m_image
+
+
+    root.after(1000, display_elapsed)
 
     # Start GUI engine
     root.mainloop()
