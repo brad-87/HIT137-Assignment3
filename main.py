@@ -19,6 +19,8 @@ class GameImage:
         self.modified = None
         self.height = None
         self.width = None
+        self.screen_width = None
+        self.screen_height = None
 
     def load_image(self, filename):
         try:
@@ -33,6 +35,7 @@ class GameImage:
 
             # Get image metrics, and create an image copy we can modify
             self.height, self.width, _ = self.image.shape
+            self.check_dimensions()
             self.modified = self.image.copy()
 
             if db:
@@ -126,6 +129,24 @@ class GameImage:
                         return True
         return False
     
+
+    # Function to see if the two images are too large to display on the users screen, and resize if required.
+    def check_dimensions(self):
+
+        if db:
+            print(f"Loaded image dimensions: w-{self.width}  h-{self.height}")
+
+        aspect_ratio = self.width / self.height
+
+        if (2 * (self.width) >= self.screen_width):
+            self.image = cv2.resize(self.image,( int(     (0.45)*self.screen_width   ),  int(      (0.45)*self.screen_width / aspect_ratio)      ))
+            self.height, self.width = self.image.shape[:2]
+
+        if (self.height >= self.screen_height):
+            self.image = cv2.resize(self.image,(    int(  aspect_ratio * (self.screen_height - 330)   ) ,    int(  self.screen_height - 330  )   ))
+            self.height, self.width = self.image.shape[:2]
+
+
 # Represent a hidden difference region, and detect if it's been clicked.
 class Difference:
 
@@ -165,32 +186,90 @@ class Game:
     pass
 
 
-if __name__ == "__main__":
-    image = GameImage()
-    image.load_image("test.png")
 
-    # Create GUI window and give it a title
+
+
+if __name__ == "__main__":
+
+    image = GameImage()
+
     root = tk.Tk()
-    root.title("Spot the Difference")
+
+    image.screen_width = root.winfo_screenwidth()
+    image.screen_height = root.winfo_screenheight()
+    #image.load_image("test.png")
+    #image.load_image("test_long.png")
+    image.load_image("test_4k+.jpg")
+    root.title("Spot The Difference")
+    window_size = f"{2*image.width + 100}x{image.height + 250}+0+0"
+
+    if db:
+        print("Root window size:" + window_size)
+
+    
+    root.minsize(700,500) # restrict window sizes
+    root.maxsize(image.screen_width, image.screen_height)
+    root.geometry(window_size) # define window size
+    
+    
+    score_frame = tk.Frame(root, borderwidth=5, relief="groove",background="Grey")
+    top_frame = tk.Frame(root, borderwidth=5, relief="groove",background="Grey")
+    middle_frame = tk.Frame(root, borderwidth=5, relief="groove", background="Black")
+    bottom_frame = tk.Frame(root, borderwidth=5, relief="groove", background="Grey")
+
+    original_label= tk.Label(top_frame, text="Original Image", font=("Aeial",16))
+    modified_label = tk.Label(top_frame, text="Modified Image", font=("Aeial",16))
+    top_frame.rowconfigure(0, weight=1)
+    top_frame.columnconfigure(1, weight=1)
+    original_label.grid(row=0, column=0, sticky="w")
+    modified_label.grid(row=0, column=1, sticky="e")
+    
+
+    found_label= tk.Label(score_frame, text="Found x differences out of 5", font=("Aeial",12))
+    attempts_label = tk.Label(score_frame, text="Attempts: ", font=("Aeial",12))
+    hint_button = tk.Button(score_frame, text="Hint - One use only", font=("Ariel", 10))
+    score_frame.rowconfigure(0, weight=1)
+    score_frame.columnconfigure(0, weight=1)
+    score_frame.columnconfigure(1, weight=1)
+    score_frame.columnconfigure(2, weight=1)
+    found_label.grid(row=0, column=0, sticky="ew")
+    attempts_label.grid(row=0, column=1, sticky="ew")
+    hint_button.grid(row=0, column=2, sticky="e")
+
 
     # Convert images
-    img1 = to_tk_image(image.image)
-    img2 = to_tk_image(image.modified)
-
+    o_image = to_tk_image(image.image)
+    m_image = to_tk_image(image.modified)
     # Create image containers, called labels and assign them to the root window
-    label1 = tk.Label(root, image=img1)
-    label1.pack(side="left", padx=10, pady=10)
+    label_o = tk.Label(middle_frame, image=o_image)
+    label_m = tk.Label(middle_frame, image=m_image)
 
-    canvas = tk.Canvas(root, width=image.width, height=image.height)
-    canvas.pack(side="right", padx=10, pady=10)
+    middle_frame.rowconfigure(0, weight=1)
+    middle_frame.grid_columnconfigure(0, weight=1)
+    middle_frame.grid_columnconfigure(1, weight=1)
+    label_o.grid(row=0, column=0, sticky="nsew")
+    label_m.grid(row=0, column=1, sticky="nsew")
 
-    canvas_img = canvas.create_image(0, 0, anchor="nw", image=img2)
+    
+    timer_label= tk.Label(bottom_frame, text="Elapsed Time: ", font=("Aeial",12))
+    status_label= tk.Label(bottom_frame, text="GameOver/Finished in x:xx time", font=("Aeial",12))
+    restart_button = tk.Button(bottom_frame, text="Restart", font=("Ariel", 12))
+    bottom_frame.rowconfigure(0, weight=1)
+    bottom_frame.columnconfigure(0, weight=1, )
+    bottom_frame.columnconfigure(1, weight=1)
+    bottom_frame.columnconfigure(2, weight=1)
+    timer_label.grid(row=0, column=0, sticky="ew")
+    status_label.grid(row=0, column=1, sticky="ew")
+    restart_button.grid(row=0, column=3)
 
-    # Assign labels to their image so garbage collector wont free the memory
-    label1.image = img1
-    canvas.image = img2
 
-    # Create game object
+    score_frame.pack(fill="x")
+    top_frame.pack(fill="x")
+    middle_frame.pack(fill="both", expand=True)
+    bottom_frame.pack(fill="x")
+ 
+
+# Create game object
     game = Game()
 
     # Store score and mistakes
@@ -239,7 +318,7 @@ if __name__ == "__main__":
                 radius = max(diff.w, diff.h) // 2
 
                 # Draw red circle on both images
-                cv2.circle(image.image, (cx, cy), radius, (0,0,255), 3)
+                #cv2.circle(image.image, (cx, cy), radius, (0,0,255), 3)
                 cv2.circle(image.modified, (cx, cy), radius, (0,0,255), 3)
 
                 print(f"Correct! Score: {game.score}")
@@ -253,15 +332,16 @@ if __name__ == "__main__":
             print(f"Wrong click! Mistakes: {game.mistakes}/3")
 
         # Convert updated images
-        new_img1 = to_tk_image(image.image)
-        new_img2 = to_tk_image(image.modified)
+        #new_o_image = to_tk_image(image.image)
+        new_m_image = to_tk_image(image.modified)
 
-        # Refresh displayed images
-        label1.config(image=new_img1)
-        label1.image = new_img1
+        #label_o.config(image=new_o_image)
+        #label_o.image = new_o_image
 
-        canvas.itemconfig(canvas_img, image=new_img2)
-        canvas.image = new_img2
+        label_m.config(image=new_m_image)
+        label_m.image = new_m_image
+        
+
 
         # Win condition
         if game.score == 5:
@@ -271,7 +351,7 @@ if __name__ == "__main__":
         if game.mistakes >= 3:
             print("GAME OVER")
 
-    canvas.bind("<Button-1>", on_click)
+    label_m.bind("<Button-1>", on_click)
 
     # Start GUI engine
     root.mainloop()
