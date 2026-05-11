@@ -196,6 +196,11 @@ if __name__ == "__main__":
     # Store score and mistakes
     game.score = 0
     game.mistakes = 0
+    # GUI score labels
+    score_label = tk.Label(root, text=f"Score: {game.score}", font=("Arial", 14))
+    score_label.pack()
+    mistake_label = tk.Label(root, text=f"Mistakes: {game.mistakes}/3", font=("Arial", 14))
+    mistake_label.pack()
 
     # Detect clicks on the modified image
     def on_click(event):
@@ -224,6 +229,7 @@ if __name__ == "__main__":
 
                 # Increase score
                 game.score += 1
+                score_label.config(text=f"Score: {game.score}")
 
                 # Find circle centre
                 cx = diff.x + diff.w // 2
@@ -243,6 +249,7 @@ if __name__ == "__main__":
         # Wrong click
         if not found:
             game.mistakes += 1
+            mistake_label.config(text=f"Mistakes: {game.mistakes}/3")
             print(f"Wrong click! Mistakes: {game.mistakes}/3")
 
         # Convert updated images
