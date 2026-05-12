@@ -1,31 +1,40 @@
+'''
+################################################################################
+
+HIT137 - Assignment 3
+
+################################################################################
+'''
+
 import cv2, os, time, sys, random
 import tkinter as tk
 from PIL import Image, ImageTk
 
+######################
+db = 1 # DEBUG ONLY  #
+######################
 
-db = 1 # debug info
+# Choose a random HARDCODED image file
+def select_image():
+    return str(  random.choice( ["test.png", "test_long.png", "test_4k+.jpg"] )   )
 
-image_file = "test_4k+.jpg"
-    #test.png
-    #test_long.png
-    #test_4k+.jpg
-    
-
-
+# Allows OpenCV to pass images to tKinter
 def to_tk_image(cv_img):
     rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
     pil_img = Image.fromarray(rgb)
     return ImageTk.PhotoImage(pil_img)
 
-
 # Handle loading and storing the image and the modified image.
 class GameImage:
 
     """
-    Handles reading an image file, scaling (if required) image while maintaining aspect ratio and
-    generates 5 difference objects
+    Handles reading an image file. 
+    Collects information about the image(height width) and about the users screen resolution.
+    Scales image (if required) while maintaining aspect ratio.
+    Generates a list of 5 difference objects.
     """
 
+    # Image variables
     def __init__(self):
         self.image = None
         self.modified = None
@@ -33,6 +42,7 @@ class GameImage:
         self.width = None
         self.screen_width = None
         self.screen_height = None
+        self.differences = []
     
     # Loads image from file, checks scaling requirements, then created 5 difference objects
     def load_image(self, filename):
@@ -49,21 +59,29 @@ class GameImage:
             # Get image metrics
             self.height, self.width, _ = self.image.shape
 
+            # Debug information
             if db:
                 print(f"File '{path}' loaded. width:{self.width} height:{self.height}")
 
-            # Check image size, scale if required, then create an image copy we can modify
+            # Check image size, scale if required.
             self.check_dimensions()
+
+            # Make a copy of the scaled image for visual modifications
             self.modified = self.image.copy()
+
 
         except Exception as errormsg:
             print("Error:", errormsg)
     
-        # List of different objects
-        self.differences = []
+        # Generate the difference list
+        self.generate_differneces()
+
+    # Creates a list of valid difference objects
+    def generate_differneces(self):
 
         # Generate a list of 5 regions to apply visual effects to
         while len(self.differences) < 5:
+
             # Generate a difference region
             new_diff = Difference(self.width, self.height)
 
@@ -73,6 +91,8 @@ class GameImage:
             
             # Non-overlapping regions are added to the differences list.
             self.differences.append(new_diff)
+
+            # Apply a visual effect to the second image
             new_diff.apply_effect(self.modified)
 
     # Function to see if the two images are too large to display on the users screen, and resize if required.
@@ -100,12 +120,14 @@ class GameImage:
 # Represent a hidden difference region, and detect if it's been clicked.
 class Difference:
     """
-    Responsible for generating scaled random width/height values for candidate regions, checks for region overlap 
-    and applies visual effects on the 'modified' image
+    Generates (scaled-with respect to the image size) random width/height values for candidate regions.
+    Stores coordinate information for later comparison.
+    Checks for region overlap with other all other difference objects.
+    Applies visual effect transformations on the 'modified' image.
     """
 
+    # Create variables
     def __init__(self, image_w, image_h):
-        # Create variables for difference regions
         self.x = None
         self.y = None
         self.w = None
@@ -115,10 +137,11 @@ class Difference:
         self.image_h = image_h
         self.randomise()
 
+        # Debug information
         if db:
             print(f"Difference created: {self.__dict__}")
 
-    # Create region within specified parameters
+    # Create region within specified parameters - Called on object init
     def randomise(self):
         # Using the smaller dimension of the image, 
         # scale min and max sizes to use in randint to be relative to image size
@@ -134,26 +157,24 @@ class Difference:
         # Generate region x and y coordinate
         self.x = random.randint(0, self.image_w - self.w)
         self.y = random.randint(0, self.image_h - self.h)
-            # Make the image modifications
-        # Compare the newly generated candidate region for any overlap with existing regions
-    
+
     # Checks object region doesn't with any other difference object's region
     def overlaps_with_existing(self, diff_list):
         
         # Load the saved valid regions one by one to check against the candidate region
         for diff in diff_list:
                 
-                if not (
-                    # If an overlap doesn't exist, then return True, else return False
-                    diff.x + diff.w <= self.x or  self.x + self.w <= diff.x or
-                    diff.y + diff.h <= self.y or  self.y + self.h <= diff.y
-                    ):
-                        return True
+            if not (
+                # If an overlap doesn't exist, then return True
+                diff.x + diff.w <= self.x or  self.x + self.w <= diff.x or
+                diff.y + diff.h <= self.y or  self.y + self.h <= diff.y
+                ):
+                    return True
         return False
     
     # Applies a random visual effect onto the modified image
     def apply_effect(self, image_to_modify):
-        # Extract the selected region from the modified image
+        # Extract the pixels of the selected region from the modified image
         # ROI = Region Of Interest
         roi = image_to_modify[
             self.y : self.y + self.h,
@@ -199,15 +220,17 @@ class Difference:
             self.x : self.x + self.w
         ] = roi
 
-        # Print debug information showing where changes were made
+        # Debug Information - Draw rectangle around transformation area, and show area top/left coordinates.
         if db:
             cv2.rectangle(image_to_modify, (self.x,self.y), (self.x + self.w, self.y+  self.h), (255,50,50) ,1 )
-            cv2.putText(image_to_modify, f"{self.x},{self.y}",(self.x + 10, self.y + 10),cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,50,50))
+            cv2.putText(image_to_modify, f"{self.x},{self.y}",(self.x + 10, self.y + 10),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,50,50))
 
-# Controls game state, user interaction, scoring, etc.
+# Controls game state, user interaction functions, scoring, etc.
 class Game:
 
+    # Game variables
     def __init__(self, root):
+        self.ext_root = root
         self.score = 0
         self.mistakes = 0
         self.game_start_time = time.time()
@@ -215,6 +238,10 @@ class Game:
         self.elapsed = 0
         self.timer_enabled = True
 
+        '''
+        Button objects greated here instead of GUI class!
+        This avoids the situation of two objects that reference on eachother at runtime(when one is created before the other).
+        '''
         self.hint_button = tk.Button(gui.score_frame, text="Hint - One use only", font=("Ariel", 10), command=self.get_hint)
         self.hint_button.grid(row=0, column=2, sticky="e")
         self.restart_button = tk.Button(gui.bottom_frame, text="Restart", font=("Ariel", 12), command=self.restart_game)
@@ -222,25 +249,26 @@ class Game:
         gui.score_frame.pack(fill="x")
         gui.bottom_frame.pack(fill="x")
         
+    # Debuging function - Show mouse coordinates on the modified image
     def mouse_movement(self, event):
         offset_x = (event.widget.winfo_width() - image.width) / 2
         offset_y = (event.widget.winfo_height() - image.height) / 2
-
         x = int(event.x - offset_x)
         y = int(event.y - offset_y)
         gui.mouse_label.config(text=f"Mouse X:{x}  Y:{y}")
         if db:
             gui.mouse_label.grid(row=0, column=2, sticky="w")
 
+    # Call back from 'mouse click' interaction
     def on_click(self, event):
-
+        
+        # If the game is over, ignore interaction
         if self.gameover:
             return
 
-        # Get mouse click coordinates
+        # Get mouse click coordinates from frame grid cell, calculate offset so that mouse coordinates and difference coordinates match.
         offset_x = (event.widget.winfo_width() - image.width) / 2
         offset_y = (event.widget.winfo_height() - image.height) / 2
-
         x = int(event.x - offset_x)
         y = int(event.y - offset_y)
 
@@ -252,7 +280,7 @@ class Game:
             # Skip already found differences
             if diff.found:
                 continue
-
+            
             # Check if click is inside region
             if (
                 diff.x <= x <= diff.x + diff.w and
@@ -262,7 +290,7 @@ class Game:
                 diff.found = True
                 found = True
 
-                # Increase score
+                # Increase score and update text fields
                 game.score += 1
                 gui.status_label.config(text=f"Got one. Nice Work!")
                 gui.found_label.config(text=f"Found {game.score} differences out of 5")
@@ -274,50 +302,52 @@ class Game:
                 # Circle size
                 radius = max(diff.w, diff.h) // 2
 
-                # Draw red circle on both images
-                #cv2.circle(image.image, (cx, cy), radius, (0,0,255), 3)
+                # Draw red circle on difference
                 cv2.circle(image.modified, (cx, cy), radius, (0,0,255), 3)
                 break
 
-        # Wrong click
+        # Wrong click: Increase mistake score, update text fields
         if not found:
             game.mistakes += 1
             gui.mistake_label.config(text=f"Incorrect: {game.mistakes}/3")
             gui.status_label.config(text=f"Nothing there!")
             gui.mistake_label.config(text=f"Incorrect Guesses: {game.mistakes}/3")
+            # Debug information
             if db:
-                pass
-                #game.mistakes -= 1
+                game.mistakes -= 1
 
-
-        # Convert updated images
+        # Convert updated 'modified' images
         new_m_image = to_tk_image(image.modified)
         gui.label_m.config(image=new_m_image)
         gui.label_m.image = new_m_image
-        
 
-        # Win condition
+        # Check for win condition
         if game.score >= 5:
             self.player_wins()
 
-        # Lose condition
+        # Check for lose condition
         if game.mistakes >= 3:
             self.game_over()
 
+    # Auto-find a region at the users request
     def get_hint(self):
         """
         check all difference objects untill first instance of found=False.
         change found to true, circle in different color. score++
         """
+
+        # Disable button to enfore 'one use only'
         if not db:
             self.hint_button.config(state="disabled")
     
+        # Cycle through difference objects
         for diff in image.differences:
 
             # Skip already found differences
             if diff.found:
                 continue
 
+            # Declare object found
             diff.found = True
 
             # Increase score
@@ -334,29 +364,44 @@ class Game:
             print(f"Score: {self.score}")
             break
         
+        # Redraw new modified image
         new_m_image = to_tk_image(image.modified)
         gui.label_m.config(image=new_m_image)
         gui.label_m.image = new_m_image
 
+        # Check for win condition
         if(self.mistakes >= 3):
             self.game_over()
 
+        # Check for lose condition
         if(self.score >=5):
             self.player_wins()
 
+    # Set state to game over
     def game_over(self):
         gui.status_label.config(text="GAME OVER!!!")
         self.gameover = True
         self.timer_enabled = False
+        # Update labels to hide images
 
+        # Cover images
+        gui.gameover_label1.grid(row=0, column=0, sticky="nsew")
+        gui.gameover_label2.grid(row=0, column=1, sticky="nsew")
+
+    # Set state to 'player wins'
     def player_wins(self):
         gui.status_label.config(text=f"Congratulations, you won in {game.elapsed} seconds")
         self.gameover = True
         self.timer_enabled = False
 
+        # Cover images
+        gui.gameover_label1.grid(row=0, column=0, sticky="nsew")
+        gui.gameover_label2.grid(row=0, column=1, sticky="nsew")
 
+    # Reset all game variables and reload image
     def restart_game(self):
         
+        # Reset timer variables and enable counter
         self.game_start_time = time.time()
         self.elapsed = 0
         self.timer_enabled = True
@@ -369,7 +414,14 @@ class Game:
         self.gameover = False
 
         # Reload/regenerate image
+        image.differences = []
+        image_file = select_image()
         image.load_image(image_file)
+
+        # Resize GUI if required
+        window_size = f"{2*image.width + 100}x{image.height + 250}+0+0"
+        self.ext_root.maxsize(image.screen_width, image.screen_height)
+        self.ext_root.geometry(window_size) # define window size
 
         # Convert updated images
         new_o = to_tk_image(image.image)
@@ -383,13 +435,22 @@ class Game:
 
         # Reset text labels
         gui.found_label.config(text=f"Found {self.score} differences out of 5")
+        gui.mistake_label.config(text="Incorrect Guesses: 0/3")
         gui.timer_label.config(text=f"Elapsed Time: {self.elapsed} Seconds")
+        gui.gameover_label1.grid_remove()
+        gui.gameover_label2.grid_remove()
+
         
         # Re-enable hint button
         self.hint_button.config(state="normal")
 
 # Creates interface components and defines placement
 class Tk_GUI:
+    '''
+    Contains layout information for frames, labels, buttons, images.
+    Initiates opening the image file
+    '''
+
     def __init__(self, root):
         self.ext_root = root
 
@@ -398,6 +459,7 @@ class Tk_GUI:
         image.screen_height = root.winfo_screenheight()
 
         # Load image
+        image_file = select_image()
         image.load_image(image_file)
         
         # Setup window size and parameters
@@ -407,17 +469,18 @@ class Tk_GUI:
         root.maxsize(image.screen_width, image.screen_height)
         root.geometry(window_size) # define window size
 
+        # Debug Information
         if db:
             print("Root window size:" + window_size)
 
-        
+        # Setup multiple frames so multiple layout managers can be ues
         self.score_frame = tk.Frame(root, borderwidth=5, relief="groove",background="Grey")
         self.top_frame = tk.Frame(root, borderwidth=5, relief="groove",background="Grey")
         self.middle_frame = tk.Frame(root, borderwidth=5, relief="groove", background="Black")
         self.bottom_frame = tk.Frame(root, borderwidth=5, relief="groove", background="Grey")
 
 
-
+        # Setup objects on 'score' fram
         self.found_label= tk.Label(self.score_frame, text="Found 0 differences out of 5", font=("Aeial",12))
         self.mistake_label = tk.Label(self.score_frame, text="Incorrect Guesses: 0/3", font=("Aeial",12))
         self.score_frame.rowconfigure(0, weight=1)
@@ -428,7 +491,7 @@ class Tk_GUI:
         self.mistake_label.grid(row=0, column=1, sticky="ew")
         
 
-
+        # Setup objects on 'top' fram
         self.original_label= tk.Label(self.top_frame, text="Original Image", font=("Aeial",16))
         self.modified_label = tk.Label(self.top_frame, text="Modified Image", font=("Aeial",16))
         self.mouse_label = tk.Label(self.top_frame, text="Modified Image", font=("Aeial",10))
@@ -443,12 +506,16 @@ class Tk_GUI:
 
 
 
-        # Convert images
+        # Prep images for display
         o_image = to_tk_image(image.image)
         m_image = to_tk_image(image.modified)
-        # Create image containers, called labels and assign them to the root window
+        # Create image containers, called labels and assign images to the frame
         self.label_o = tk.Label(self.middle_frame, image=o_image)
         self.label_m = tk.Label(self.middle_frame, image=m_image)
+
+        # Setup objects on 'middle' frame
+        self.gameover_label1= tk.Label(self.middle_frame, text="GAME", font=("Aeial",72))
+        self.gameover_label2= tk.Label(self.middle_frame, text="OVER", font=("Aeial",72))
         self.middle_frame.rowconfigure(0, weight=1)
         self.middle_frame.grid_columnconfigure(0, weight=1)
         self.middle_frame.grid_columnconfigure(1, weight=1)
@@ -456,7 +523,7 @@ class Tk_GUI:
         self.label_m.grid(row=0, column=1, sticky="nsew")
         
 
-        
+        # Setup objects on 'bottom' fram
         self.timer_label= tk.Label(self.bottom_frame, text="Elapsed Time: 0 Seconds", font=("Aeial",12))
         self.status_label= tk.Label(self.bottom_frame, text="GameOver/Finished in x:xx time", font=("Aeial",12))
         self.bottom_frame.rowconfigure(0, weight=1)
@@ -467,42 +534,49 @@ class Tk_GUI:
         self.status_label.grid(row=0, column=1, sticky="ew")
         
 
-
+        # Have each frame display the objects defined above
         self.score_frame.pack(fill="x")
         self.top_frame.pack(fill="x")
         self.middle_frame.pack(fill="both", expand=True)
         self.bottom_frame.pack(fill="x")
 
 
+# Program start/entry point
 if __name__ == "__main__":
 
+    
     def calc_elapsed():
-        # stuffs me how to make this work in a class.
+        # Couldn't get this into a class because it references both game and gui. So it had to be defined after class initialisation.
+
+        # If timer is enabled then calculate elapsed time, and update the text in the label.
         if (game.timer_enabled):
             game.elapsed = int(time.time() - game.game_start_time)
             gui.timer_label.config(text=f"Elapsed Time: {game.elapsed} Seconds")
+
+        # Set a timed callback to this function
         tk_obj.after(1000, calc_elapsed)
 
-
-
+    
+    
+    # Initialise a tk window
     tk_obj = tk.Tk()
 
-    # Create image and window objects
+    # Create class objects for image manipupation, GUI, and game logic
     image = GameImage()
     gui = Tk_GUI(tk_obj)
     game = Game(tk_obj)
-    # Begin game
 
-    
+
+    # Start the initial timer callback    
     tk_obj.after(1000, calc_elapsed)
     gui.timer_label.config(text=f"Elapsed Time: {game.elapsed} Seconds")
 
-
+    # Bind user inputs for mouse movement and button(left click) to functions
     gui.label_m.bind("<Button-1>", game.on_click)
     if db:
         gui.label_m.bind("<Motion>", game.mouse_movement )
 
-    # display images
+    # Update image labels to display images
     new_o_image = to_tk_image(image.image)
     new_m_image = to_tk_image(image.modified)
     gui.label_o.config(image=new_o_image)
@@ -510,4 +584,4 @@ if __name__ == "__main__":
 
     # Start GUI engine
     tk_obj.mainloop()
-
+    
