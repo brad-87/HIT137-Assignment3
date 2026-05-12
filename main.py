@@ -9,9 +9,10 @@ HIT137 - Assignment 3
 import cv2, os, time, sys, random
 import tkinter as tk
 from PIL import Image, ImageTk
+from threading import Timer
 
 ######################
-db = 1 # DEBUG ONLY  #
+db = 0 # DEBUG ONLY  #
 ######################
 
 # Choose a random HARDCODED image file
@@ -303,12 +304,13 @@ class Game:
                 radius = max(diff.w, diff.h) // 2
 
                 # Draw red circle on difference
-                cv2.circle(image.modified, (cx, cy), radius, (0,0,255), 3)
+                cv2.circle(image.modified, (cx, cy), radius, (255,0,0), 3)
                 break
 
         # Wrong click: Increase mistake score, update text fields
         if not found:
             game.mistakes += 1
+            cv2.circle(image.modified, (x, y), 6, (0,0,255), 3)
             gui.mistake_label.config(text=f"Incorrect: {game.mistakes}/3")
             gui.status_label.config(text=f"Nothing there!")
             gui.mistake_label.config(text=f"Incorrect Guesses: {game.mistakes}/3")
@@ -323,11 +325,16 @@ class Game:
 
         # Check for win condition
         if game.score >= 5:
-            self.player_wins()
+            gui.status_label.config(text=f"Congratulations, you won in {game.elapsed} seconds")
+            # Set function to run after 2 seconds
+            self.ext_root.after(1000, self.player_wins)      
+
 
         # Check for lose condition
         if game.mistakes >= 3:
-            self.game_over()
+            gui.status_label.config(text="GAME OVER!!!")
+            # Set function to run after 2 seconds
+            self.ext_root.after(1000, self.game_over)  
 
     # Auto-find a region at the users request
     def get_hint(self):
@@ -350,9 +357,7 @@ class Game:
             # Declare object found
             diff.found = True
 
-            # Increase score
-            self.score += 1
-            gui.found_label.config(text=f"Found {self.score} differences out of 5")
+
 
             # Find circle centre
             cx = diff.x + diff.w // 2
@@ -362,6 +367,11 @@ class Game:
             radius = max(diff.w, diff.h) // 2
             cv2.circle(image.modified, (cx, cy), radius, (0,255,0), 3)
             print(f"Score: {self.score}")
+
+            # Increase score
+            self.score += 1
+            gui.found_label.config(text=f"Found {self.score} differences out of 5")
+            
             break
         
         # Redraw new modified image
@@ -370,33 +380,36 @@ class Game:
         gui.label_m.image = new_m_image
 
         # Check for win condition
-        if(self.mistakes >= 3):
-            self.game_over()
+        if game.score >= 5:
+            gui.status_label.config(text=f"Congratulations, you won in {game.elapsed} seconds")
+            # Set function to run after 2 seconds
+            self.ext_root.after(1000, self.player_wins)      
+
 
         # Check for lose condition
-        if(self.score >=5):
-            self.player_wins()
+        if game.mistakes >= 3:
+            gui.status_label.config(text="GAME OVER!!!")
+            # Set function to run after 2 seconds
+            self.ext_root.after(1000, self.game_over) 
 
     # Set state to game over
     def game_over(self):
-        gui.status_label.config(text="GAME OVER!!!")
         self.gameover = True
         self.timer_enabled = False
-        # Update labels to hide images
-
+        
         # Cover images
         gui.gameover_label1.grid(row=0, column=0, sticky="nsew")
         gui.gameover_label2.grid(row=0, column=1, sticky="nsew")
 
     # Set state to 'player wins'
     def player_wins(self):
-        gui.status_label.config(text=f"Congratulations, you won in {game.elapsed} seconds")
         self.gameover = True
         self.timer_enabled = False
+        
+        # Run restart game after 2 second
+        self.ext_root.after(1000, self.restart_game())
 
-        # Cover images
-        gui.gameover_label1.grid(row=0, column=0, sticky="nsew")
-        gui.gameover_label2.grid(row=0, column=1, sticky="nsew")
+        
 
     # Reset all game variables and reload image
     def restart_game(self):
@@ -525,7 +538,7 @@ class Tk_GUI:
 
         # Setup objects on 'bottom' fram
         self.timer_label= tk.Label(self.bottom_frame, text="Elapsed Time: 0 Seconds", font=("Aeial",12))
-        self.status_label= tk.Label(self.bottom_frame, text="GameOver/Finished in x:xx time", font=("Aeial",12))
+        self.status_label= tk.Label(self.bottom_frame, text=f"New game begins NOW!", font=("Aeial",12))
         self.bottom_frame.rowconfigure(0, weight=1)
         self.bottom_frame.columnconfigure(0, weight=1, )
         self.bottom_frame.columnconfigure(1, weight=1)
