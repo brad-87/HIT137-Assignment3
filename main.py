@@ -10,10 +10,11 @@ import cv2, os, time, sys, random
 import tkinter as tk
 import tkinter.filedialog as fd
 from PIL import Image, ImageTk
+from screeninfo import get_monitors
 
 
 ######################
-db = 0 # DEBUG ONLY  #
+db = 1 # DEBUG ONLY  #
 ######################
 
 # Choose a random HARDCODED image file
@@ -505,8 +506,10 @@ class Tk_GUI:
         self.ext_root = root
 
         # Get screen resolution information
-        image.screen_width = root.winfo_screenwidth()
-        image.screen_height = root.winfo_screenheight()
+        for monitor in get_monitors():
+            if monitor.is_primary:
+                image.screen_width = monitor.width
+                image.screen_height = monitor.height
 
         # Load image
         image_file = select_image()
