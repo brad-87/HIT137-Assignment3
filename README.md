@@ -50,7 +50,7 @@ opencv - Modify and process images.
 pillow - Makes images usable in Tkinter.
 
 ```bash
-pip install opencv-python pillow
+pip install opencv-python pillow screeninfo
 ```
 
 ---

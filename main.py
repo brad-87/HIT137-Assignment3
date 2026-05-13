@@ -14,7 +14,7 @@ from screeninfo import get_monitors
 
 
 ######################
-db = 1 # DEBUG ONLY  #
+db = 0 # DEBUG ONLY  #
 ######################
 
 # Choose a random HARDCODED image file
