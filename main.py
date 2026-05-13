@@ -7,12 +7,13 @@ HIT137 - Assignment 3
 '''
 
 import cv2, os, time, sys, random
+import tkinter as tk
 import tkinter.filedialog as fd
 from PIL import Image, ImageTk
-from threading import Timer
+
 
 ######################
-db = 0 # DEBUG ONLY  #
+db = 1 # DEBUG ONLY  #
 ######################
 
 # Choose a random HARDCODED image file
@@ -298,7 +299,7 @@ class Game:
                 # Increase score and update text fields
                 game.score += 1
                 gui.status_label.config(text=f"Got one. Nice Work!")
-                gui.found_label.config(text=f"Found {game.score}/5 | Remaining: {5 - game.score}")
+                gui.found_label.config(text=f"Found {game.score} | Remaining: {5 - game.score}")
 
                 # Find circle centre
                 cx = diff.x + diff.w // 2
@@ -308,14 +309,14 @@ class Game:
                 radius = max(diff.w, diff.h) // 2
 
                 # Draw red circle on difference
-                cv2.circle(image.image, (cx,cy), radius, (0,0,255), 3)
-                cv2.circle(image.modified, (cx,cy), radius, (0,0,255), 3)
+                cv2.circle(image.image, (cx,cy), radius, (0,0,255), 2)
+                cv2.circle(image.modified, (cx,cy), radius, (0,0,255), 2)
                 break
 
         # Wrong click: Increase mistake score, update text fields
-        if not found:
+        if not found and not game.gameover:
             game.mistakes += 1
-            cv2.circle(image.modified, (x, y), 6, (0,0,255), 3)
+            cv2.circle(image.modified, (x, y), 5, (0,0,255), 9)
             gui.status_label.config(text=f"Nothing there!")
             gui.mistake_label.config(text=f"Incorrect Guesses: {game.mistakes}/3")
             # Debug information
@@ -339,9 +340,11 @@ class Game:
 
         # Check for lose condition
         if game.mistakes >= 3:
+            self.gameover = True
+            self.reveal_all()
             gui.status_label.config(text="GAME OVER!!!")
             # Set function to run after 2 seconds
-            self.ext_root.after(1000, self.game_over)  
+            self.ext_root.after(3000, self.game_over)  
 
     # Auto-find a region at the users request
     def get_hint(self):
@@ -364,7 +367,10 @@ class Game:
             # Declare object found
             diff.found = True
 
-
+            # Increase score and update text fields - required to increment score so the level can actually finish
+            game.score += 1
+            gui.status_label.config(text=f"Here is a free hint!")
+            gui.found_label.config(text=f"Found {game.score} | Remaining: {5 - game.score}")
 
             # Find circle centre
             cx = diff.x + diff.w // 2
@@ -372,10 +378,26 @@ class Game:
 
             # Circle size
             radius = max(diff.w, diff.h) // 2
-            cv2.circle(image.modified, (cx, cy), radius, (0,255,0), 3)
-            cv2.circle(image.image, (cx, cy), radius, (0,255,0), 3)
+            cv2.circle(image.modified, (cx, cy), radius, (0,255,0),2)
+            cv2.circle(image.image, (cx, cy), radius, (0,255,0), 2)
             print(f"Score: {self.score}")
+            break
 
+        # Convert updated images
+        new_o_image = to_tk_image(image.image)
+        gui.label_o.config(image=new_o_image)
+        gui.label_o.image = new_o_image
+        new_m_image = to_tk_image(image.modified)
+        gui.label_m.config(image=new_m_image)
+        gui.label_m.image = new_m_image
+
+        # Check for win condition
+        if game.score >= 5:
+            gui.status_label.config(text=f"Congratulations, you won in {game.elapsed} seconds")
+            # Set function to run after 2 seconds
+            self.ext_root.after(1000, self.player_wins)      
+
+    # Option to visually show all difference regions to the player
     def reveal_all(self):
         for diff in image.differences:
             if not diff.found:
@@ -393,25 +415,23 @@ class Game:
         gui.label_m.image = new_m
         self.gameover = True
         self.timer_enabled = False
-        gui.status_label.config(text="Differences found! Load a new image to play again.")
+        gui.status_label.config(text="Differences shown.")
 
+    # Allow player to select image file
     def load_new_image(self):
+
+        # Open file dialogue with constraints on file type
         filepath = fd.askopenfilename(filetypes=[("Images", "*.jpg *.jpeg *.png *.bmp")])
-        if filepath:
-            image.differences = []
-            image.load_image(filepath)
-            self.restart_game()    
 
-
-        # Check for lose condition
-        if game.mistakes >= 3:
-            gui.status_label.config(text="GAME OVER!!!")
-            # Set function to run after 2 seconds
-            self.ext_root.after(1000, self.game_over) 
+        if db:
+            print(f"User selected file path: {filepath}")
+        
+        # If file is selected pass the file path to reset game function
+        if (filepath != ""):
+            self.restart_game(filepath)    
 
     # Set state to game over
     def game_over(self):
-        self.gameover = True
         self.timer_enabled = False
         
         # Cover images
@@ -423,13 +443,11 @@ class Game:
         self.gameover = True
         self.timer_enabled = False
         
-        # Run restart game after 2 second
+        # Run restart game after 1 second
         self.ext_root.after(1000, self.restart_game)
 
-        
-
     # Reset all game variables and reload image
-    def restart_game(self):
+    def restart_game(self, user_file=""):
         
         # Reset timer variables and enable counter
         self.game_start_time = time.time()
@@ -445,8 +463,11 @@ class Game:
 
         # Reload/regenerate image
         image.differences = []
-        image_file = select_image()
-        image.load_image(image_file)
+        if(user_file != ""):
+            image.load_image(user_file)
+        else:
+            image_file = select_image()
+            image.load_image(image_file)
 
         # Resize GUI if required
         window_size = f"{2*image.width + 100}x{image.height + 250}+0+0"
@@ -464,13 +485,12 @@ class Game:
         gui.label_m.image = new_m
 
         # Reset text labels
-        gui.found_label.config(text=f"Found {self.score}/5 | Remaining: {5 - game.score}")
+        gui.found_label.config(text=f"Found {self.score} | Remaining: {5 - game.score}")
         gui.mistake_label.config(text="Incorrect Guesses: 0/3")
         gui.timer_label.config(text=f"Elapsed Time: {self.elapsed} Seconds")
         gui.gameover_label1.grid_remove()
         gui.gameover_label2.grid_remove()
 
-        
         # Re-enable hint button
         self.hint_button.config(state="normal")
 
@@ -510,7 +530,7 @@ class Tk_GUI:
         self.bottom_frame = tk.Frame(root, borderwidth=5, relief="groove", background="Grey")
 
 
-        # Setup objects on 'score' fram
+        # Setup objects on 'score' frame
         self.found_label= tk.Label(self.score_frame, text="Found 0 differences out of 5", font=("Arial",12))
         self.mistake_label = tk.Label(self.score_frame, text="Incorrect Guesses: 0/3", font=("Arial",12))
         self.score_frame.rowconfigure(0, weight=1)
@@ -521,10 +541,10 @@ class Tk_GUI:
         self.mistake_label.grid(row=0, column=1, sticky="ew")
         
 
-        # Setup objects on 'top' fram
+        # Setup objects on 'top' frame
         self.original_label= tk.Label(self.top_frame, text="Original Image", font=("Arial",16))
         self.modified_label = tk.Label(self.top_frame, text="Modified Image", font=("Arial",16))
-        self.mouse_label = tk.Label(self.top_frame, text="Modified Image", font=("Arial",10))
+        self.mouse_label = tk.Label(self.top_frame, text="Mouse X:n Y:n", font=("Arial",10)) # Dont pack() or grid() this here - its only for debug mode
         self.top_frame.rowconfigure(0, weight=1)
         self.top_frame.columnconfigure(0, weight=1)
         self.top_frame.columnconfigure(1, weight=1)
@@ -532,8 +552,6 @@ class Tk_GUI:
         self.top_frame.columnconfigure(3, weight=1)
         self.original_label.grid(row=0, column=0, sticky="w")
         self.modified_label.grid(row=0, column=3, sticky="e")
-        self.mouse_label.grid(row=0, column=2, sticky="e")
-
 
 
         # Prep images for display
@@ -553,7 +571,7 @@ class Tk_GUI:
         self.label_m.grid(row=0, column=1, sticky="nsew")
         
 
-        # Setup objects on 'bottom' fram
+        # Setup objects on 'bottom' frame
         self.timer_label= tk.Label(self.bottom_frame, text="Elapsed Time: 0 Seconds", font=("Arial",12))
         self.status_label= tk.Label(self.bottom_frame, text=f"New game begins NOW!", font=("Arial",12))
         self.bottom_frame.rowconfigure(0, weight=1)
@@ -587,7 +605,7 @@ if __name__ == "__main__":
         tk_obj.after(1000, calc_elapsed)
 
     
-    
+
     # Initialise a tk window
     tk_obj = tk.Tk()
 
