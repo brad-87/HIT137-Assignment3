@@ -13,12 +13,12 @@ from PIL import Image, ImageTk
 
 
 ######################
-db = 1 # DEBUG ONLY  #
+db = 0 # DEBUG ONLY  #
 ######################
 
 # Choose a random HARDCODED image file
 def select_image():
-    return str(  random.choice( ["test.png", "test_long.png", "test_4k+.jpg"] )   )
+    return str(  random.choice( ["test1.png", "test2.png", "test3.png", "test4.png", "test5.png"] )   )
 
 # Allows OpenCV to pass images to tKinter
 def to_tk_image(cv_img):
