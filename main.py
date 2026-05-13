@@ -7,7 +7,7 @@ HIT137 - Assignment 3
 '''
 
 import cv2, os, time, sys, random
-import tkinkter.filedialog as fd
+import tkinter.filedialog as fd
 from PIL import Image, ImageTk
 from threading import Timer
 
@@ -309,7 +309,7 @@ class Game:
 
                 # Draw red circle on difference
                 cv2.circle(image.image, (cx,cy), radius, (0,0,255), 3)
-                cv2.circle(image.modified. (cx,cy), radius, (0,0,255), 3)
+                cv2.circle(image.modified, (cx,cy), radius, (0,0,255), 3)
                 break
 
         # Wrong click: Increase mistake score, update text fields
@@ -375,35 +375,31 @@ class Game:
             cv2.circle(image.modified, (cx, cy), radius, (0,255,0), 3)
             print(f"Score: {self.score}")
 
-        def reveal_all(self):
-            for diff in image.differences:
-                if not diff.found:
-                    diff,found = True
-                    cx = diff.x + diff.w //2
-                    cy = diff.y + diff.h //2
-                    radius = max(diff.w, diff.h) //2
-                    cv.2circle(image.modified, (cx,cy), radius. (255,0,0), 3)
-                    cv.2circle(image.image, (cx,cy), radius. (255,0,0), 3)
-            new_o = to_tk_image(image.image)
-            new_m = to.tk_image(image.modified)
-            gui.label_o.config(image=new_o)
-            gui.label_o.image = new_o
-            gui.label_m.config(image=new_m)
-            gui.label_m.image = new_m
-            self.gameover = True
-            self.timer_enabled = False
-            gui.status_label.config(text="Differences found! Load a new image to play again.")
+    def reveal_all(self):
+        for diff in image.differences:
+            if not diff.found:
+                diff.found = True
+                cx = diff.x + diff.w //2
+                cy = diff.y + diff.h //2
+                radius = max(diff.w, diff.h) //2
+                cv2.circle(image.modified, (cx,cy), radius. (255,0,0), 3)
+                cv2.circle(image.image, (cx,cy), radius. (255,0,0), 3)
+        new_o = to_tk_image(image.image)
+        new_m = to_tk_image(image.modified)
+        gui.label_o.config(image=new_o)
+        gui.label_o.image = new_o
+        gui.label_m.config(image=new_m)
+        gui.label_m.image = new_m
+        self.gameover = True
+        self.timer_enabled = False
+        gui.status_label.config(text="Differences found! Load a new image to play again.")
 
-        def load_new_image(self):
-            filepath = fd,askopenfilename(filetypes=[("Images", "*,jpg *jpeg *.png *.bmp")])
-            if filepath:
-                image.differences = []
-                image.load_image(filepath)
-                self.restart_game()
-
-
-            cv2.circle(image.modified, (cx,cy), radius, (0,255,0), 3)
-            cv2.circle(image.image, (cx,cy), radius, (0,255,0), 3)
+    def load_new_image(self):
+        filepath = fd.askopenfilename(filetypes=[("Images", "*.jpg *.jpeg *.png *.bmp")])
+        if filepath:
+            image.differences = []
+            image.load_image(filepath)
+            self.restart_game()
 
             # Increase score
             self.score += 1
