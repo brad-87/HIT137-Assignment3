@@ -7,7 +7,7 @@ HIT137 - Assignment 3
 '''
 
 import cv2, os, time, sys, random
-import tkinter as tk
+import tkinkter.filedialog as fd
 from PIL import Image, ImageTk
 from threading import Timer
 
@@ -41,8 +41,8 @@ class GameImage:
         self.modified = None
         self.height = None
         self.width = None
-        self.screen_width = None
-        self.screen_height = None
+        self.screen_width = 1920
+        self.screen_height = 1080
         self.differences = []
     
     # Loads image from file, checks scaling requirements, then created 5 difference objects
@@ -75,10 +75,10 @@ class GameImage:
             print("Error:", errormsg)
     
         # Generate the difference list
-        self.generate_differneces()
+        self.generate_differences()
 
     # Creates a list of valid difference objects
-    def generate_differneces(self):
+    def generate_differences(self):
 
         # Generate a list of 5 regions to apply visual effects to
         while len(self.differences) < 5:
@@ -240,13 +240,17 @@ class Game:
         self.timer_enabled = True
 
         '''
-        Button objects greated here instead of GUI class!
+        Button objects created here instead of GUI class!
         This avoids the situation of two objects that reference on eachother at runtime(when one is created before the other).
         '''
-        self.hint_button = tk.Button(gui.score_frame, text="Hint - One use only", font=("Ariel", 10), command=self.get_hint)
+        self.hint_button = tk.Button(gui.score_frame, text="Hint - One use only", font=("Arial", 10), command=self.get_hint)
         self.hint_button.grid(row=0, column=2, sticky="e")
-        self.restart_button = tk.Button(gui.bottom_frame, text="Restart", font=("Ariel", 12), command=self.restart_game)
+        self.restart_button = tk.Button(gui.bottom_frame, text="Restart", font=("Arial", 12), command=self.restart_game)
         self.restart_button.grid(row=0, column=3)
+        self.reveal_button = tk.Button(gui.bottom_frame, text="Reveal All", font=("Arial",12), command=self.reveal_all)
+        self.reveal_button.grid(row=0, column=4)
+        self.load_button = tk.Button(gui.bottom_frame, text ="Load Image", font=("Arial", 12), command=self.load_new_image)
+        self.load_button.grid(row=0, column=5)
         gui.score_frame.pack(fill="x")
         gui.bottom_frame.pack(fill="x")
         
@@ -294,7 +298,7 @@ class Game:
                 # Increase score and update text fields
                 game.score += 1
                 gui.status_label.config(text=f"Got one. Nice Work!")
-                gui.found_label.config(text=f"Found {game.score} differences out of 5")
+                gui.found_label.config(text=f"Found {game.score}/5 | Remaining: {5 - game.score}")
 
                 # Find circle centre
                 cx = diff.x + diff.w // 2
@@ -304,21 +308,24 @@ class Game:
                 radius = max(diff.w, diff.h) // 2
 
                 # Draw red circle on difference
-                cv2.circle(image.modified, (cx, cy), radius, (255,0,0), 3)
+                cv2.circle(image.image, (cx,cy), radius, (0,0,255), 3)
+                cv2.circle(image.modified. (cx,cy), radius, (0,0,255), 3)
                 break
 
         # Wrong click: Increase mistake score, update text fields
         if not found:
             game.mistakes += 1
             cv2.circle(image.modified, (x, y), 6, (0,0,255), 3)
-            gui.mistake_label.config(text=f"Incorrect: {game.mistakes}/3")
             gui.status_label.config(text=f"Nothing there!")
             gui.mistake_label.config(text=f"Incorrect Guesses: {game.mistakes}/3")
             # Debug information
             if db:
                 game.mistakes -= 1
 
-        # Convert updated 'modified' images
+        # Convert updated images
+        new_o_image = to_tk_image(image.image)
+        gui.label_o.config(image=new_o_image)
+        gui.label_o.image = new_o_image
         new_m_image = to_tk_image(image.modified)
         gui.label_m.config(image=new_m_image)
         gui.label_m.image = new_m_image
@@ -368,13 +375,47 @@ class Game:
             cv2.circle(image.modified, (cx, cy), radius, (0,255,0), 3)
             print(f"Score: {self.score}")
 
+        def reveal_all(self):
+            for diff in image.differences:
+                if not diff.found:
+                    diff,found = True
+                    cx = diff.x + diff.w //2
+                    cy = diff.y + diff.h //2
+                    radius = max(diff.w, diff.h) //2
+                    cv.2circle(image.modified, (cx,cy), radius. (255,0,0), 3)
+                    cv.2circle(image.image, (cx,cy), radius. (255,0,0), 3)
+            new_o = to_tk_image(image.image)
+            new_m = to.tk_image(image.modified)
+            gui.label_o.config(image=new_o)
+            gui.label_o.image = new_o
+            gui.label_m.config(image=new_m)
+            gui.label_m.image = new_m
+            self.gameover = True
+            self.timer_enabled = False
+            gui.status_label.config(text="Differences found! Load a new image to play again.")
+
+        def load_new_image(self):
+            filepath = fd,askopenfilename(filetypes=[("Images", "*,jpg *jpeg *.png *.bmp")])
+            if filepath:
+                image.differences = []
+                image.load_image(filepath)
+                self.restart_game()
+
+
+            cv2.circle(image.modified, (cx,cy), radius, (0,255,0), 3)
+            cv2.circle(image.image, (cx,cy), radius, (0,255,0), 3)
+
             # Increase score
             self.score += 1
-            gui.found_label.config(text=f"Found {self.score} differences out of 5")
+            gui.found_label.config(text=f"Found {self.score}/5 | Remaining: {5 - game.score}")
             
             break
+
         
-        # Redraw new modified image
+        # Redraw both images
+        new_o_image = to_tk_image(image.image)
+        gui.label_o.config(image=new_o_image)
+        gui.label_o.image = new_o_image
         new_m_image = to_tk_image(image.modified)
         gui.label_m.config(image=new_m_image)
         gui.label_m.image = new_m_image
@@ -407,7 +448,7 @@ class Game:
         self.timer_enabled = False
         
         # Run restart game after 2 second
-        self.ext_root.after(1000, self.restart_game())
+        self.ext_root.after(1000, self.restart_game)
 
         
 
@@ -447,7 +488,7 @@ class Game:
         gui.label_m.image = new_m
 
         # Reset text labels
-        gui.found_label.config(text=f"Found {self.score} differences out of 5")
+        gui.found_label.config(text=f"Found {self.score}/5 | Remaining: {5 - game.score}")
         gui.mistake_label.config(text="Incorrect Guesses: 0/3")
         gui.timer_label.config(text=f"Elapsed Time: {self.elapsed} Seconds")
         gui.gameover_label1.grid_remove()
@@ -494,8 +535,8 @@ class Tk_GUI:
 
 
         # Setup objects on 'score' fram
-        self.found_label= tk.Label(self.score_frame, text="Found 0 differences out of 5", font=("Aeial",12))
-        self.mistake_label = tk.Label(self.score_frame, text="Incorrect Guesses: 0/3", font=("Aeial",12))
+        self.found_label= tk.Label(self.score_frame, text="Found 0 differences out of 5", font=("Arial",12))
+        self.mistake_label = tk.Label(self.score_frame, text="Incorrect Guesses: 0/3", font=("Arial",12))
         self.score_frame.rowconfigure(0, weight=1)
         self.score_frame.columnconfigure(0, weight=1)
         self.score_frame.columnconfigure(1, weight=1)
@@ -505,9 +546,9 @@ class Tk_GUI:
         
 
         # Setup objects on 'top' fram
-        self.original_label= tk.Label(self.top_frame, text="Original Image", font=("Aeial",16))
-        self.modified_label = tk.Label(self.top_frame, text="Modified Image", font=("Aeial",16))
-        self.mouse_label = tk.Label(self.top_frame, text="Modified Image", font=("Aeial",10))
+        self.original_label= tk.Label(self.top_frame, text="Original Image", font=("Arial",16))
+        self.modified_label = tk.Label(self.top_frame, text="Modified Image", font=("Arial",16))
+        self.mouse_label = tk.Label(self.top_frame, text="Modified Image", font=("Arial",10))
         self.top_frame.rowconfigure(0, weight=1)
         self.top_frame.columnconfigure(0, weight=1)
         self.top_frame.columnconfigure(1, weight=1)
@@ -527,8 +568,8 @@ class Tk_GUI:
         self.label_m = tk.Label(self.middle_frame, image=m_image)
 
         # Setup objects on 'middle' frame
-        self.gameover_label1= tk.Label(self.middle_frame, text="GAME", font=("Aeial",72))
-        self.gameover_label2= tk.Label(self.middle_frame, text="OVER", font=("Aeial",72))
+        self.gameover_label1= tk.Label(self.middle_frame, text="GAME", font=("Arial",72))
+        self.gameover_label2= tk.Label(self.middle_frame, text="OVER", font=("Arial",72))
         self.middle_frame.rowconfigure(0, weight=1)
         self.middle_frame.grid_columnconfigure(0, weight=1)
         self.middle_frame.grid_columnconfigure(1, weight=1)
@@ -537,8 +578,8 @@ class Tk_GUI:
         
 
         # Setup objects on 'bottom' fram
-        self.timer_label= tk.Label(self.bottom_frame, text="Elapsed Time: 0 Seconds", font=("Aeial",12))
-        self.status_label= tk.Label(self.bottom_frame, text=f"New game begins NOW!", font=("Aeial",12))
+        self.timer_label= tk.Label(self.bottom_frame, text="Elapsed Time: 0 Seconds", font=("Arial",12))
+        self.status_label= tk.Label(self.bottom_frame, text=f"New game begins NOW!", font=("Arial",12))
         self.bottom_frame.rowconfigure(0, weight=1)
         self.bottom_frame.columnconfigure(0, weight=1, )
         self.bottom_frame.columnconfigure(1, weight=1)
