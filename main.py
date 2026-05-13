@@ -373,6 +373,7 @@ class Game:
             # Circle size
             radius = max(diff.w, diff.h) // 2
             cv2.circle(image.modified, (cx, cy), radius, (0,255,0), 3)
+            cv2.circle(image.image, (cx, cy), radius, (0,255,0), 3)
             print(f"Score: {self.score}")
 
     def reveal_all(self):
@@ -382,8 +383,8 @@ class Game:
                 cx = diff.x + diff.w //2
                 cy = diff.y + diff.h //2
                 radius = max(diff.w, diff.h) //2
-                cv2.circle(image.modified, (cx,cy), radius. (255,0,0), 3)
-                cv2.circle(image.image, (cx,cy), radius. (255,0,0), 3)
+                cv2.circle(image.modified, (cx,cy), radius, (255,0,0), 3)
+                cv2.circle(image.image, (cx,cy), radius, (255,0,0), 3)
         new_o = to_tk_image(image.image)
         new_m = to_tk_image(image.modified)
         gui.label_o.config(image=new_o)
@@ -399,28 +400,7 @@ class Game:
         if filepath:
             image.differences = []
             image.load_image(filepath)
-            self.restart_game()
-
-            # Increase score
-            self.score += 1
-            gui.found_label.config(text=f"Found {self.score}/5 | Remaining: {5 - game.score}")
-            
-            break
-
-        
-        # Redraw both images
-        new_o_image = to_tk_image(image.image)
-        gui.label_o.config(image=new_o_image)
-        gui.label_o.image = new_o_image
-        new_m_image = to_tk_image(image.modified)
-        gui.label_m.config(image=new_m_image)
-        gui.label_m.image = new_m_image
-
-        # Check for win condition
-        if game.score >= 5:
-            gui.status_label.config(text=f"Congratulations, you won in {game.elapsed} seconds")
-            # Set function to run after 2 seconds
-            self.ext_root.after(1000, self.player_wins)      
+            self.restart_game()    
 
 
         # Check for lose condition
