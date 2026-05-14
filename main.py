@@ -180,52 +180,75 @@ class Difference:
                     return True
         return False
     
-    # Applies a random visual effect onto the modified image
+    # Parent method (polymorphism)
     def apply_effect(self, image_to_modify):
-        # Extract the pixels of the selected region from the modified image
-        # ROI = Region Of Interest
+        pass
+
+
+# -----------------------------------
+# CHILD CLASS 1
+# -----------------------------------
+
+class ColourShiftDifference(Difference):
+
+    def apply_effect(self, image_to_modify):
+
         roi = image_to_modify[
-            self.y : self.y + self.h,
-            self.x : self.x + self.w
+            self.y:self.y + self.h,
+            self.x:self.x + self.w
         ]
 
-        # Randomly choose one of three visual effects
-        choice = random.choice(["colour", "blur", "brightness"])
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-        # ---------------------------
-        # EFFECT 1: COLOUR SHIFT
-        # ---------------------------
-        if choice == "colour":
+        hsv[:, :, 0] = (hsv[:, :, 0] + 10) % 180
 
-            # Convert image region from BGR to HSV colour space
-            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        roi = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
-            # Slightly shift hue values to change colours subtly
-            hsv[:, :, 0] = (hsv[:, :, 0] + 10) % 180
-
-            # Convert back to BGR colour format
-            roi = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-
-        # ---------------------------
-        # EFFECT 2: BLUR
-        # ---------------------------
-        elif choice == "blur":
-
-            # Apply Gaussian blur to soften the selected region
-            roi = cv2.GaussianBlur(roi, (9, 9), 0)
-
-        # ---------------------------
-        # EFFECT 3: BRIGHTNESS CHANGE
-        # ---------------------------
-        elif choice == "brightness":
-
-            # Increase brightness slightly
-            roi = cv2.convertScaleAbs(roi, alpha=1, beta=25)
-
-        # Place the modified region back into the image
         image_to_modify[
-            self.y : self.y + self.h,
-            self.x : self.x + self.w
+            self.y:self.y + self.h,
+            self.x:self.x + self.w
+        ] = roi
+
+
+# -----------------------------------
+# CHILD CLASS 2
+# -----------------------------------
+
+class BlurDifference(Difference):
+
+    def apply_effect(self, image_to_modify):
+
+        roi = image_to_modify[
+            self.y:self.y + self.h,
+            self.x:self.x + self.w
+        ]
+
+        roi = cv2.GaussianBlur(roi, (9, 9), 0)
+
+        image_to_modify[
+            self.y:self.y + self.h,
+            self.x:self.x + self.w
+        ] = roi
+
+
+# -----------------------------------
+# CHILD CLASS 3
+# -----------------------------------
+
+class BrightnessDifference(Difference):
+
+    def apply_effect(self, image_to_modify):
+
+        roi = image_to_modify[
+            self.y:self.y + self.h,
+            self.x:self.x + self.w
+        ]
+
+        roi = cv2.convertScaleAbs(roi, alpha=1, beta=25)
+
+        image_to_modify[
+            self.y:self.y + self.h,
+            self.x:self.x + self.w
         ] = roi
 
         # Debug Information - Draw rectangle around transformation area, and show area top/left coordinates.
