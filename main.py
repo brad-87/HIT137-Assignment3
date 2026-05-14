@@ -62,8 +62,7 @@ class GameImage:
             
             # Make sure something was read into the image variable
             if self.image is None:
-                print("Error: Failed to load image")
-                sys.exit()
+                tk.messagebox.showerror("Error", "Failed to load image")
 
             # Get image metrics
             self.height, self.width, _ = self.image.shape
