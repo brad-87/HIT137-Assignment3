@@ -214,6 +214,11 @@ class ColourShiftDifference(Difference):
             self.x:self.x + self.w
         ] = roi
 
+        if db:
+            cv2.rectangle(image_to_modify, (self.x,self.y), (self.x + self.w, self.y + self.h), (255,50,50) ,1 )
+            cv2.putText(image_to_modify, f"{self.x},{self.y}",(self.x + 10, self.y + 10),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,50,50))
+
+
 # -----------------------------------
 # CHILD CLASS 2
 # -----------------------------------
@@ -233,6 +238,10 @@ class BlurDifference(Difference):
             self.y:self.y + self.h,
             self.x:self.x + self.w
         ] = roi
+
+        if db:
+            cv2.rectangle(image_to_modify, (self.x,self.y), (self.x + self.w, self.y + self.h), (255,50,50) ,1 )
+            cv2.putText(image_to_modify, f"{self.x},{self.y}",(self.x + 10, self.y + 10),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,50,50))
 
 # -----------------------------------
 # CHILD CLASS 3
@@ -256,7 +265,7 @@ class BrightnessDifference(Difference):
 
         # Debug Information - Draw rectangle around transformation area, and show area top/left coordinates.
         if db:
-            cv2.rectangle(image_to_modify, (self.x,self.y), (self.x + self.w, self.y+  self.h), (255,50,50) ,1 )
+            cv2.rectangle(image_to_modify, (self.x,self.y), (self.x + self.w, self.y + self.h), (255,50,50) ,1 )
             cv2.putText(image_to_modify, f"{self.x},{self.y}",(self.x + 10, self.y + 10),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,50,50))
 
 # Controls game state, user interaction functions, scoring, etc.
@@ -447,7 +456,7 @@ class Game:
         gui.label_m.image = new_m
         self.gameover = True
         self.timer_enabled = False
-        gui.status_label.config(text="Differences shown.")
+        gui.status_label.config(text="Differences shown. Restart game.")
 
     # Allow player to select image file
     def load_new_image(self):
