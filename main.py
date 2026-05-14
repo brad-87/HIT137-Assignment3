@@ -12,7 +12,6 @@ import tkinter.filedialog as fd
 from PIL import Image, ImageTk
 from screeninfo import get_monitors
 
-
 ######################
 db = 0 # DEBUG ONLY  #
 ######################
@@ -191,7 +190,6 @@ class Difference:
     def apply_effect(self, image_to_modify):
         pass
 
-
 # -----------------------------------
 # CHILD CLASS 1
 # -----------------------------------
@@ -216,7 +214,6 @@ class ColourShiftDifference(Difference):
             self.x:self.x + self.w
         ] = roi
 
-
 # -----------------------------------
 # CHILD CLASS 2
 # -----------------------------------
@@ -236,7 +233,6 @@ class BlurDifference(Difference):
             self.y:self.y + self.h,
             self.x:self.x + self.w
         ] = roi
-
 
 # -----------------------------------
 # CHILD CLASS 3
@@ -599,6 +595,7 @@ class Tk_GUI:
         self.label_o = tk.Label(self.middle_frame, image=o_image)
         self.label_m = tk.Label(self.middle_frame, image=m_image)
 
+        
         # Setup objects on 'middle' frame
         self.gameover_label1= tk.Label(self.middle_frame, text="GAME", font=("Arial",72))
         self.gameover_label2= tk.Label(self.middle_frame, text="OVER", font=("Arial",72))
@@ -630,7 +627,6 @@ class Tk_GUI:
 # Program start/entry point
 if __name__ == "__main__":
 
-    
     def calc_elapsed():
         # Couldn't get this into a class because it references both game and gui. So it had to be defined after class initialisation.
 
@@ -642,8 +638,6 @@ if __name__ == "__main__":
         # Set a timed callback to this function
         tk_obj.after(1000, calc_elapsed)
 
-    
-
     # Initialise a tk window
     tk_obj = tk.Tk()
 
@@ -651,7 +645,6 @@ if __name__ == "__main__":
     image = GameImage()
     gui = Tk_GUI(tk_obj)
     game = Game(tk_obj)
-
 
     # Start the initial timer callback    
     tk_obj.after(1000, calc_elapsed)
