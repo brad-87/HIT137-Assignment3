@@ -84,24 +84,31 @@ class GameImage:
         # Generate the difference list
         self.generate_differences()
 
-    # Creates a list of valid difference objects
+  # Creates a list of valid difference objects
     def generate_differences(self):
 
-        # Generate a list of 5 regions to apply visual effects to
-        while len(self.differences) < 5:
+            # Randomly choose a difference type
+            diff_types = [
+                ColourShiftDifference,
+                BlurDifference,
+                BrightnessDifference
+            ]
 
-            # Generate a difference region
-            new_diff = Difference(self.width, self.height)
+            while len(self.differences) < 5:
 
-            # Check if the new region overlaps any other stored region, and disregard if overlapping
-            if new_diff.overlaps_with_existing(self.differences):
-                continue
-            
-            # Non-overlapping regions are added to the differences list.
-            self.differences.append(new_diff)
+                diff_class = random.choice(diff_types)
+                # Generate a difference region
+                new_diff = diff_class(self.width, self.height)
 
-            # Apply a visual effect to the second image
-            new_diff.apply_effect(self.modified)
+                # Check if the new region overlaps any other stored region, and disregard if overlapping
+                if new_diff.overlaps_with_existing(self.differences):
+                    continue
+
+                # Non-overlapping regions are added to the differences list
+                self.differences.append(new_diff)
+
+                # Apply a visual effect to the image
+                new_diff.apply_effect(self.modified)
 
     # Function to see if the two images are too large to display on the users screen, and resize if required.
     def check_dimensions(self):
