@@ -50,8 +50,14 @@ class GameImage:
     # Loads image from file, checks scaling requirements, then created 5 difference objects
     def load_image(self, filename):
         try:
-            # Build the full file path and read and store the image
-            path = os.path.join(os.path.dirname(__file__), filename)
+
+            # Check whether the filename is already a full file path
+            if os.path.isabs(filename):
+                path = filename
+            else:
+                path = os.path.join(os.path.dirname(__file__), filename)
+
+            # Read and store the image
             self.image = cv2.imread(path)
             
             # Make sure something was read into the image variable
